@@ -71,7 +71,11 @@ namespace Microsoft.Xna.Framework {
 		[Export ("layerClass")]
 		public static Class GetLayerClass ()
 		{
+#if MACCATALYST
+			return new Class ("CAEAGLLayer");
+#else
 			return new Class (typeof (CAEAGLLayer));
+#endif
 		}
 
 		public override bool CanBecomeFirstResponder {
@@ -174,7 +178,11 @@ namespace Microsoft.Xna.Framework {
 #endif
 
 		private new CAEAGLLayer Layer {
+#if MACCATALYST
+			get { return new CAEAGLLayer(base.Layer.Handle); }
+#else
 			get { return base.Layer as CAEAGLLayer; }
+#endif
 		}
 
 		// FIXME: Someday, hopefully it will be possible to move
@@ -393,9 +401,8 @@ namespace Microsoft.Xna.Framework {
 			base.LayoutSubviews ();
 
 #if MACCATALYST
-			// On Catalyst, ensure the layer fills the view and content scales to fit
+			// On Catalyst, ensure the layer fills the view
 			Layer.Frame = Bounds;
-			Layer.ContentsGravity = CoreAnimation.CALayer.GravityResizeAspect;
 #endif
 
             var gds = _platform.Game.Services.GetService (
