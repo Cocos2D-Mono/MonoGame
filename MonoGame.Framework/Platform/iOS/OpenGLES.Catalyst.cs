@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using Foundation;
 using ObjCRuntime;
 using CoreAnimation;
+using CoreGraphics;
 
 namespace OpenGLES
 {
@@ -145,14 +146,16 @@ namespace OpenGLES
 namespace CoreAnimation
 {
     /// <summary>
-    /// Minimal CAEAGLLayer wrapper for Mac Catalyst.
-    /// Uses Register to bind to the real native CAEAGLLayer class from OpenGLES.
+    /// Thin wrapper around the native CAEAGLLayer.
+    /// Does NOT subclass — just wraps the native handle to provide typed access.
+    /// The iOSGameView.LayerClass returns the real native CAEAGLLayer class,
+    /// and UIKit creates the actual native instance. We just wrap it here.
     /// </summary>
-    [Register("CAEAGLLayer")]
-    public class CAEAGLLayer : CALayer
+    public class CAEAGLLayer
     {
-        public CAEAGLLayer() : base() { }
-        public CAEAGLLayer(IntPtr handle) : base(handle) { }
+        public IntPtr Handle { get; private set; }
+
+        public CAEAGLLayer(IntPtr handle) { Handle = handle; }
 
         public NSDictionary DrawableProperties
         {
@@ -165,6 +168,21 @@ namespace CoreAnimation
             {
                 OpenGLES.Messaging.void_objc_msgSend_IntPtr(Handle, Selector.GetHandle("setDrawableProperties:"), value?.Handle ?? IntPtr.Zero);
             }
+        }
+
+        /// Access Bounds/Frame/ContentsScale via the underlying CALayer wrapper.
+        private CALayer AsCALayer => Runtime.GetNSObject<CALayer>(Handle);
+
+        public CGRect Bounds => AsCALayer.Bounds;
+        public CGRect Frame
+        {
+            get => AsCALayer.Frame;
+            set => AsCALayer.Frame = value;
+        }
+        public nfloat ContentsScale
+        {
+            get => AsCALayer.ContentsScale;
+            set => AsCALayer.ContentsScale = value;
         }
     }
 }
