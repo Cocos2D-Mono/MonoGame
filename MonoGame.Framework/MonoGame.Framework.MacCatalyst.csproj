@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-maccatalyst</TargetFramework>
+    <DefineConstants>IOS;MACCATALYST;GLES;STBSHARP_INTERNAL</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <MGOpenGL>GLES</MGOpenGL>
+    <Description>The MonoGame runtime for Mac Catalyst (iOS apps on macOS).</Description>
+    <PackageTags>monogame;maccatalyst;catalyst</PackageTags>
+    <PackageId>MonoGame.Framework.MacCatalyst</PackageId>
+    <AppendTargetFrameworkToOutputPath>False</AppendTargetFrameworkToOutputPath>
+    <SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+    <IsAotCompatible>true</IsAotCompatible>
+    <CheckEolWorkloads>false</CheckEolWorkloads>
+    <ValidateXcodeVersion>false</ValidateXcodeVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <CreatePackage>false</CreatePackage>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <CreatePackage>false</CreatePackage>
+  </PropertyGroup>
+
+  <!-- Same exclusion/inclusion pattern as iOS csproj -->
+  <ItemGroup>
+    <Compile Remove="bin\**\*" />
+    <Compile Remove="obj\**\*" />
+    <Compile Remove="Platform\**\*" />
+    <Compile Remove="Properties\**\*" />
+    <Compile Remove="Utilities\System.Numerics.Vectors\**\*" />
+    <Compile Remove="Devices\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Platform\**\*" />
+    <None Remove="Utilities\System.Numerics.Vectors\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="GraphicsDeviceManager.cs" />
+    <Compile Remove="Graphics\GraphicsAdapter.cs" />
+    <Compile Remove="Graphics\OcclusionQuery.cs" />
+  </ItemGroup>
+
+  <!-- Same platform files as iOS -->
+  <ItemGroup>
+    <Compile Include="Platform\iOS\Devices\Sensors\Accelerometer.cs" />
+    <Compile Include="Platform\iOS\Devices\Sensors\Compass.cs" />
+    <Compile Include="Platform\iOS\iOSGamePlatform.cs" />
+    <Compile Include="Platform\iOS\iOSGameView.cs" />
+    <Compile Include="Platform\iOS\iOSGameViewController.cs" />
+    <Compile Include="Platform\iOS\iOSGameView_GLAbstraction.cs" />
+    <Compile Include="Platform\iOS\iOSGameView_Touch.cs" />
+    <Compile Include="Platform\iOS\iOSGameWindow.cs" />
+    <Compile Include="Platform\iOS\OrientationConverter.cs" />
+    <Compile Include="Platform\iOS\OpenGLES.Catalyst.cs" />
+
+    <Compile Include="Platform\Audio\Xact\WaveBank.Default.cs" />
+    <Compile Include="Platform\GamePlatform.Mobile.cs" />
+    <Compile Include="Platform\Graphics\GraphicsAdapter.Legacy.cs" />
+    <Compile Include="Platform\Graphics\OpenGL.iOS.cs" />
+    <Compile Include="Platform\Graphics\Texture2D.StbSharp.cs" />
+    <Compile Include="Platform\GraphicsDeviceManager.Legacy.cs" />
+    <Compile Include="Platform\Input\GamePad.iOS.cs" />
+    <Compile Include="Platform\Input\Joystick.Default.cs" />
+    <Compile Include="Platform\Input\Keyboard.Default.cs" />
+    <Compile Include="Platform\Input\KeyboardInput.iOS.cs" />
+    <Compile Include="Platform\Input\MessageBox.iOS.cs" />
+    <Compile Include="Platform\Input\Mouse.Default.cs" />
+    <Compile Include="Platform\Input\MouseCursor.Default.cs" />
+    <Compile Include="Platform\Media\MediaPlayer.Default.cs" />
+    <Compile Include="Platform\TitleContainer.MacOS.cs" />
+    <Compile Include="Platform\Utilities\FuncLoader.iOS.cs" />
+    <Compile Include="Platform\Utilities\InteropHelpers.cs" />
+    <Compile Include="Platform\Utilities\ReflectionHelpers.Default.cs" />
+
+    <Compile Include="..\ThirdParty\StbImageSharp\src\**\*.cs" LinkBase="Utilities\StbImageSharp" />
+    <Compile Include="..\ThirdParty\StbImageWriteSharp\src\**\*.cs" LinkBase="Utilities\StbImageWriteSharp" />
+  </ItemGroup>
+
+  <Import Project="Platform\OpenGL.targets" />
+  <Import Project="Platform\OpenAL.targets" />
+  <Import Project="MonoGame.Framework.Devices.Sensors.targets" />
+</Project>

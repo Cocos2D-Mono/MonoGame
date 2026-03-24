@@ -49,7 +49,11 @@ namespace Microsoft.Xna.Framework
             {
                 UIScreen screen = UIScreen.MainScreen;
 
-                #if !TVOS
+                #if MACCATALYST
+                // On Catalyst, UIScreen.MainScreen.Bounds returns the full display in portrait orientation.
+                // Use the game's preferred dimensions directly for the view frame.
+                frame = new CGRect(0, 0, screen.Bounds.Width, screen.Bounds.Height);
+                #elif !TVOS
                 // iOS 7 and older reverses width/height in landscape mode when reporting resolution,
                 // iOS 8+ reports resolution correctly in all cases
                 if (InterfaceOrientation == UIInterfaceOrientation.LandscapeLeft || InterfaceOrientation == UIInterfaceOrientation.LandscapeRight)

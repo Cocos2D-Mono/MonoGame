@@ -13,6 +13,7 @@ using UIKit;
 using CoreGraphics;
 
 using MonoGame.OpenGL;
+using Microsoft.Xna.Framework.Input;
 
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input.Touch;
@@ -76,6 +77,101 @@ namespace Microsoft.Xna.Framework {
 		public override bool CanBecomeFirstResponder {
 			get { return true; }
 		}
+
+#if MACCATALYST
+		private readonly System.Collections.Generic.List<Keys> _pressedKeys = new System.Collections.Generic.List<Keys>();
+
+		public override void PressesBegan(NSSet<UIPress> presses, UIPressesEvent evt)
+		{
+			foreach (UIPress press in presses)
+			{
+				if (press.Key != null)
+				{
+					var key = MapUIKeyToXnaKey(press.Key);
+					if (key != Keys.None && !_pressedKeys.Contains(key))
+						_pressedKeys.Add(key);
+				}
+			}
+			Keyboard.SetKeys(_pressedKeys);
+		}
+
+		public override void PressesEnded(NSSet<UIPress> presses, UIPressesEvent evt)
+		{
+			foreach (UIPress press in presses)
+			{
+				if (press.Key != null)
+				{
+					var key = MapUIKeyToXnaKey(press.Key);
+					_pressedKeys.Remove(key);
+				}
+			}
+			Keyboard.SetKeys(_pressedKeys);
+		}
+
+		public override void PressesCancelled(NSSet<UIPress> presses, UIPressesEvent evt)
+		{
+			PressesEnded(presses, evt);
+		}
+
+		private static Keys MapUIKeyToXnaKey(UIKey uiKey)
+		{
+			return (UIKeyboardHidUsage)uiKey.KeyCode switch
+			{
+				UIKeyboardHidUsage.KeyboardA => Keys.A,
+				UIKeyboardHidUsage.KeyboardB => Keys.B,
+				UIKeyboardHidUsage.KeyboardC => Keys.C,
+				UIKeyboardHidUsage.KeyboardD => Keys.D,
+				UIKeyboardHidUsage.KeyboardE => Keys.E,
+				UIKeyboardHidUsage.KeyboardF => Keys.F,
+				UIKeyboardHidUsage.KeyboardG => Keys.G,
+				UIKeyboardHidUsage.KeyboardH => Keys.H,
+				UIKeyboardHidUsage.KeyboardI => Keys.I,
+				UIKeyboardHidUsage.KeyboardJ => Keys.J,
+				UIKeyboardHidUsage.KeyboardK => Keys.K,
+				UIKeyboardHidUsage.KeyboardL => Keys.L,
+				UIKeyboardHidUsage.KeyboardM => Keys.M,
+				UIKeyboardHidUsage.KeyboardN => Keys.N,
+				UIKeyboardHidUsage.KeyboardO => Keys.O,
+				UIKeyboardHidUsage.KeyboardP => Keys.P,
+				UIKeyboardHidUsage.KeyboardQ => Keys.Q,
+				UIKeyboardHidUsage.KeyboardR => Keys.R,
+				UIKeyboardHidUsage.KeyboardS => Keys.S,
+				UIKeyboardHidUsage.KeyboardT => Keys.T,
+				UIKeyboardHidUsage.KeyboardU => Keys.U,
+				UIKeyboardHidUsage.KeyboardV => Keys.V,
+				UIKeyboardHidUsage.KeyboardW => Keys.W,
+				UIKeyboardHidUsage.KeyboardX => Keys.X,
+				UIKeyboardHidUsage.KeyboardY => Keys.Y,
+				UIKeyboardHidUsage.KeyboardZ => Keys.Z,
+				UIKeyboardHidUsage.Keyboard1 => Keys.D1,
+				UIKeyboardHidUsage.Keyboard2 => Keys.D2,
+				UIKeyboardHidUsage.Keyboard3 => Keys.D3,
+				UIKeyboardHidUsage.Keyboard4 => Keys.D4,
+				UIKeyboardHidUsage.Keyboard5 => Keys.D5,
+				UIKeyboardHidUsage.Keyboard6 => Keys.D6,
+				UIKeyboardHidUsage.Keyboard7 => Keys.D7,
+				UIKeyboardHidUsage.Keyboard8 => Keys.D8,
+				UIKeyboardHidUsage.Keyboard9 => Keys.D9,
+				UIKeyboardHidUsage.Keyboard0 => Keys.D0,
+				UIKeyboardHidUsage.KeyboardReturnOrEnter => Keys.Enter,
+				UIKeyboardHidUsage.KeyboardEscape => Keys.Escape,
+				UIKeyboardHidUsage.KeyboardDeleteOrBackspace => Keys.Back,
+				UIKeyboardHidUsage.KeyboardTab => Keys.Tab,
+				UIKeyboardHidUsage.KeyboardSpacebar => Keys.Space,
+				UIKeyboardHidUsage.KeyboardUpArrow => Keys.Up,
+				UIKeyboardHidUsage.KeyboardDownArrow => Keys.Down,
+				UIKeyboardHidUsage.KeyboardLeftArrow => Keys.Left,
+				UIKeyboardHidUsage.KeyboardRightArrow => Keys.Right,
+				UIKeyboardHidUsage.KeyboardLeftShift => Keys.LeftShift,
+				UIKeyboardHidUsage.KeyboardRightShift => Keys.RightShift,
+				UIKeyboardHidUsage.KeyboardLeftControl => Keys.LeftControl,
+				UIKeyboardHidUsage.KeyboardRightControl => Keys.RightControl,
+				UIKeyboardHidUsage.KeyboardLeftAlt => Keys.LeftAlt,
+				UIKeyboardHidUsage.KeyboardRightAlt => Keys.RightAlt,
+				_ => Keys.None
+			};
+		}
+#endif
 
 		private new CAEAGLLayer Layer {
 			get { return base.Layer as CAEAGLLayer; }
@@ -206,6 +302,11 @@ namespace Microsoft.Xna.Framework {
 
                 if (this.NextResponder is iOSGameViewController)
                 {
+#if MACCATALYST
+                    // On Catalyst, use viewport dimensions directly — no orientation swap needed
+                    width = viewportWidth;
+                    height = viewportHeight;
+#else
                     var displayOrientation = _platform.Game.Window.CurrentOrientation;
                     if (displayOrientation == DisplayOrientation.LandscapeLeft || displayOrientation == DisplayOrientation.LandscapeRight)
                     {
@@ -217,6 +318,7 @@ namespace Microsoft.Xna.Framework {
                         height = Math.Max(viewportHeight, viewportWidth);
                         width = Math.Min(viewportHeight, viewportWidth);
                     }
+#endif
                 }
 
                 pp.BackBufferHeight = height;
@@ -290,6 +392,12 @@ namespace Microsoft.Xna.Framework {
 		{
 			base.LayoutSubviews ();
 
+#if MACCATALYST
+			// On Catalyst, ensure the layer fills the view and content scales to fit
+			Layer.Frame = Bounds;
+			Layer.ContentsGravity = CoreAnimation.CALayer.GravityResizeAspect;
+#endif
+
             var gds = _platform.Game.Services.GetService (
                 typeof (IGraphicsDeviceService)) as IGraphicsDeviceService;
 
@@ -301,6 +409,7 @@ namespace Microsoft.Xna.Framework {
 			if (__renderbuffergraphicsContext == null)
 				CreateContext();
 			CreateFramebuffer ();
+
 		}
 
 		#region UIWindow Notifications

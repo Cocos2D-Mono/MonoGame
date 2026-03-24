@@ -47,6 +47,13 @@ namespace Microsoft.Xna.Framework {
 				var bounds = _viewController.View.Bounds;
                 var scale = _viewController.View.ContentScaleFactor;
 
+#if MACCATALYST
+                // On Catalyst, use view bounds directly — no orientation swap needed,
+                // and don't multiply by ContentScaleFactor (the window manager handles scaling)
+                return new Rectangle(
+                    (int)bounds.X, (int)bounds.Y,
+                    (int)bounds.Width, (int)bounds.Height);
+#else
                 // TODO: Calculate this only when dirty.
                 if (_viewController is iOSGameViewController)
                 {
@@ -56,7 +63,7 @@ namespace Microsoft.Xna.Framework {
                     int width;
                     int height;
 
-                    if (currentOrientation == DisplayOrientation.LandscapeLeft || 
+                    if (currentOrientation == DisplayOrientation.LandscapeLeft ||
                         currentOrientation == DisplayOrientation.LandscapeRight)
                     {
                         width = (int)Math.Max(bounds.Width, bounds.Height);
@@ -78,12 +85,13 @@ namespace Microsoft.Xna.Framework {
 				return new Rectangle(
                     (int)(bounds.X * scale), (int)(bounds.Y * scale),
                     (int)(bounds.Width * scale), (int)(bounds.Height * scale));
+#endif
 			}
 		}
 
 		public override DisplayOrientation CurrentOrientation {
 			get {
-                #if TVOS
+                #if TVOS || MACCATALYST
                 return DisplayOrientation.LandscapeLeft;
                 #else
 				return OrientationConverter.ToDisplayOrientation(_viewController.InterfaceOrientation);

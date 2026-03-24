@@ -26,6 +26,9 @@ namespace Microsoft.Xna.Framework
         private UIWindow _mainWindow;
         private List<NSObject> _applicationObservers;
         private CADisplayLink _displayLink;
+#if MACCATALYST
+        private CoreGraphics.CGSize _lastViewSize;
+#endif
 
         public iOSGamePlatform(Game game) :
             base(game)
@@ -140,6 +143,17 @@ namespace Microsoft.Xna.Framework
             // will be respected at launch
             _mainWindow.RootViewController = _viewController;
 
+#if MACCATALYST
+            // On Catalyst, set window size constraints via the UIWindowScene
+            if (_mainWindow.WindowScene?.SizeRestrictions != null)
+            {
+                _mainWindow.WindowScene.SizeRestrictions.MinimumSize = new CoreGraphics.CGSize(960, 540);
+                // Don't cap MaximumSize — let fullscreen use the full display
+                _mainWindow.WindowScene.SizeRestrictions.MaximumSize = new CoreGraphics.CGSize(9999, 9999);
+            }
+
+#endif
+
             BeginObservingUIApplication();
 
             _viewController.View.BecomeFirstResponder();
@@ -154,11 +168,7 @@ namespace Microsoft.Xna.Framework
             if (IsPlayingVideo)
                 return;
 
-            // FIXME: Remove this call, and the whole Tick method, once
-            //        GraphicsDevice is where platform-specific Present
-            //        functionality is actually implemented.  At that
-            //        point, it should be possible to pass Game.Tick
-            //        directly to NSTimer.CreateRepeatingTimer.
+
             _viewController.View.MakeCurrent();
             Game.Tick ();
             Threading.Run();
@@ -193,12 +203,17 @@ namespace Microsoft.Xna.Framework
 
         public override void EnterFullScreen()
         {
-            // Do nothing: iOS games are always full screen
+#if MACCATALYST
+            // On Catalyst, trigger a view relayout when fullscreen changes
+            _viewController.View.SetNeedsLayout();
+#endif
         }
 
         public override void ExitFullScreen()
         {
-            // Do nothing: iOS games are always full screen
+#if MACCATALYST
+            _viewController.View.SetNeedsLayout();
+#endif
         }
 
         public override void Exit()
