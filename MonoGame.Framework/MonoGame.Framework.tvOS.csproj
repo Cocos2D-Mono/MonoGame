@@ -1,0 +1,99 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-tvos</TargetFramework>
+    <DefineConstants>IOS;GLES;STBSHARP_INTERNAL</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <MGOpenGL>GLES</MGOpenGL>
+    <Description>The MonoGame runtime for tvOS (Apple TV).</Description>
+    <PackageTags>monogame;tvos;appletv</PackageTags>
+    <PackageId>MonoGame.Framework.tvOS</PackageId>
+    <AppendTargetFrameworkToOutputPath>False</AppendTargetFrameworkToOutputPath>
+    <SupportedOSPlatformVersion>16.0</SupportedOSPlatformVersion>
+    <IsAotCompatible>true</IsAotCompatible>
+    <CheckEolWorkloads>false</CheckEolWorkloads>
+    <ValidateXcodeVersion>false</ValidateXcodeVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <CreatePackage>false</CreatePackage>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <CreatePackage>false</CreatePackage>
+  </PropertyGroup>
+
+  <!-- Same exclusion/inclusion pattern as iOS csproj -->
+  <ItemGroup>
+    <Compile Remove="bin\**\*" />
+    <Compile Remove="obj\**\*" />
+    <Compile Remove="Platform\**\*" />
+    <Compile Remove="Properties\**\*" />
+    <Compile Remove="Utilities\System.Numerics.Vectors\**\*" />
+    <Compile Remove="Devices\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Platform\**\*" />
+    <None Remove="Utilities\System.Numerics.Vectors\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="GraphicsDeviceManager.cs" />
+    <Compile Remove="Graphics\GraphicsAdapter.cs" />
+    <Compile Remove="Graphics\OcclusionQuery.cs" />
+    <!-- Exclude iOS-specific files not available on tvOS -->
+    <Compile Remove="Platform\Media\Video.iOS.cs" />
+    <Compile Remove="Platform\Media\VideoPlayer.iOS.cs" />
+    <Compile Remove="Platform\iOS\OrientationConverter.cs" />
+  </ItemGroup>
+
+  <!-- Same platform files as iOS (tvOS reuses the iOS platform backend) -->
+  <ItemGroup>
+    <!-- Accelerometer/Compass excluded — tvOS has no CoreMotion -->
+    <Compile Include="Platform\iOS\iOSGamePlatform.cs" />
+    <Compile Include="Platform\iOS\iOSGameView.cs" />
+    <Compile Include="Platform\iOS\iOSGameViewController.cs" />
+    <Compile Include="Platform\iOS\iOSGameView_GLAbstraction.cs" />
+    <Compile Include="Platform\iOS\iOSGameView_Touch.cs" />
+    <Compile Include="Platform\iOS\iOSGameWindow.cs" />
+    <!-- OrientationConverter excluded — tvOS has no orientation changes -->
+
+    <Compile Include="Platform\Audio\Xact\WaveBank.Default.cs" />
+    <Compile Include="Platform\GamePlatform.Mobile.cs" />
+    <Compile Include="Platform\Graphics\GraphicsAdapter.Legacy.cs" />
+    <Compile Include="Platform\Graphics\OpenGL.iOS.cs" />
+    <Compile Include="Platform\Graphics\Texture2D.StbSharp.cs" />
+    <Compile Include="Platform\GraphicsDeviceManager.Legacy.cs" />
+    <Compile Include="Platform\Input\GamePad.iOS.cs" />
+    <Compile Include="Platform\Input\Joystick.Default.cs" />
+    <Compile Include="Platform\Input\Keyboard.Default.cs" />
+    <Compile Include="Platform\Input\KeyboardInput.Default.cs" />
+    <Compile Include="Platform\Input\MessageBox.Default.cs" />
+    <Compile Include="Platform\Input\Mouse.Default.cs" />
+    <Compile Include="Platform\Input\MouseCursor.Default.cs" />
+    <Compile Include="Platform\Media\MediaPlayer.Default.cs" />
+    <Compile Include="Platform\Media\Video.Default.cs" />
+    <Compile Include="Platform\Media\VideoPlayer.Default.cs" />
+    <Compile Include="Platform\TitleContainer.MacOS.cs" />
+    <Compile Include="Platform\Utilities\FuncLoader.iOS.cs" />
+    <Compile Include="Platform\Utilities\InteropHelpers.cs" />
+    <Compile Include="Platform\Utilities\ReflectionHelpers.Default.cs" />
+
+    <Compile Include="..\ThirdParty\StbImageSharp\src\**\*.cs" LinkBase="Utilities\StbImageSharp" />
+    <Compile Include="..\ThirdParty\StbImageWriteSharp\src\**\*.cs" LinkBase="Utilities\StbImageWriteSharp" />
+  </ItemGroup>
+
+  <Import Project="Platform\OpenGL.targets" />
+  <Import Project="Platform\OpenAL.targets" />
+  <!-- Sensors excluded on tvOS — no CoreMotion/accelerometer/compass -->
+
+  <!-- Remove iOS-specific files pulled in by targets that don't work on tvOS -->
+  <ItemGroup>
+    <Compile Remove="Platform\Media\Video.iOS.cs" />
+    <Compile Remove="Platform\Media\VideoPlayer.iOS.cs" />
+    <Compile Remove="Platform\Media\MediaLibrary.iOS.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Platform\Media\MediaLibrary.Default.cs" />
+  </ItemGroup>
+</Project>
