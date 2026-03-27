@@ -4,11 +4,51 @@
 
 using GameController;
 using System.Collections.Generic;
+using System;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Xna.Framework.Input
 {
     static partial class GamePad
     {
+        [DllImport("/usr/lib/libobjc.dylib", EntryPoint = "objc_msgSend")]
+        private static extern IntPtr objc_msgSend(IntPtr receiver, IntPtr selector);
+
+        [DllImport("/usr/lib/libobjc.dylib", EntryPoint = "objc_msgSend")]
+        private static extern float objc_msgSend_float(IntPtr receiver, IntPtr selector);
+
+        /// <summary>
+        /// Reads thumbstick and trigger analog values from an ExtendedGamepad.
+        /// </summary>
+        private static void ReadThumbsticks(GCExtendedGamepad gamepad,
+            out float lx, out float ly, out float rx, out float ry,
+            out float lt, out float rt)
+        {
+            lx = (float)gamepad.LeftThumbstick.XAxis.Value;
+            ly = (float)gamepad.LeftThumbstick.YAxis.Value;
+            rx = (float)gamepad.RightThumbstick.XAxis.Value;
+            ry = (float)gamepad.RightThumbstick.YAxis.Value;
+            lt = (float)gamepad.LeftTrigger.Value;
+            rt = (float)gamepad.RightTrigger.Value;
+        }
+
+        internal static bool MenuPressed = false;
+        // Thumbstick/trigger values stored from the last ExtendedGamepad read.
+        // On tvOS, local Vector2 variables get mysteriously zeroed between the
+        // foreach loop body and post-loop code, so we use static fields instead.
+        private static float _lastLX, _lastLY, _lastRX, _lastRY, _lastLT, _lastRT;
+
+        // .NET tvOS bindings throw InvalidCastException when accessing Gamepad/MicroGamepad
+        // on controllers that don't have those profiles. These helpers catch the exception.
+        private static bool SafeHasGamepad(GCController c)
+        {
+            try { return c.Gamepad != null; } catch { return false; }
+        }
+        private static bool SafeHasMicroGamepad(GCController c)
+        {
+            try { return c.MicroGamepad != null; } catch { return false; }
+        }
+
         private static int PlatformGetMaxNumberOfGamePads()
         {
             return 4;
@@ -86,7 +126,7 @@ namespace Microsoft.Xna.Framework.Input
                 capabilities.HasRightYThumbStick = true;
                 capabilities.HasRightStickButton = true;
             }
-            else if (controller.Gamepad != null)
+            else if (SafeHasGamepad(controller))
             {
                 capabilities.IsConnected = true;
                 capabilities.HasAButton = true;
@@ -100,14 +140,24 @@ namespace Microsoft.Xna.Framework.Input
                 capabilities.HasLeftShoulderButton = true;
                 capabilities.HasRightShoulderButton = true;
             }
+            else if (SafeHasMicroGamepad(controller))
+            {
+                capabilities.IsConnected = true;
+                capabilities.HasAButton = true;
+                capabilities.HasXButton = true;
+                capabilities.HasStartButton = true;
+                capabilities.HasDPadUpButton = true;
+                capabilities.HasDPadDownButton = true;
+                capabilities.HasDPadLeftButton = true;
+                capabilities.HasDPadRightButton = true;
+                capabilities.HasLeftXThumbStick = true;
+                capabilities.HasLeftYThumbStick = true;
+            }
             return capabilities;
         }
 
         private static GamePadState PlatformGetState(int index, GamePadDeadZone leftDeadZoneMode, GamePadDeadZone rightDeadZoneMode)
         {
-            var ind = (GCControllerPlayerIndex)index;
-
-
             Buttons buttons = 0;
             bool connected = false;
             ButtonState Up = ButtonState.Released;
@@ -121,23 +171,80 @@ namespace Microsoft.Xna.Framework.Input
             float leftTriggerValue = 0;
             float rightTriggerValue = 0;
 
-            AssignIndex(ind);
-
             foreach (var controller in GCController.Controllers)
             {
-
                 if (controller == null)
                     continue;
 
-                if (controller.PlayerIndex != ind)
+                // validate controller has a valid input profile before reporting as connected
+                bool hasProfile = controller.ExtendedGamepad != null;
+                if (!hasProfile) { try { hasProfile = controller.MicroGamepad != null; } catch { } }
+                if (!hasProfile) { try { hasProfile = controller.Gamepad != null; } catch { } }
+                if (!hasProfile)
                     continue;
 
-                // validate controller has a valid input profile before reporting as connected
-                if (controller.ExtendedGamepad == null && controller.Gamepad == null)
-                    continue;
+                // For index 0, accept any controller (prefer ExtendedGamepad)
+                // For other indices, try to match by player index
+                if (index > 0)
+                {
+                    try
+                    {
+                        var ind = (GCControllerPlayerIndex)index;
+                        if (controller.PlayerIndex != ind)
+                            continue;
+                    }
+                    catch { continue; }
+                }
 
                 connected = true;
 
+#if TVOS
+                // Siri Remote — MicroGamepad profile (touchpad + A/X + Menu)
+                if (SafeHasMicroGamepad(controller) && controller.ExtendedGamepad == null)
+                {
+                    if (controller.MicroGamepad.ButtonA.IsPressed)
+                        buttons |= Buttons.A;
+                    if (controller.MicroGamepad.ButtonX.IsPressed)
+                        buttons |= Buttons.X;
+
+                    if (controller.MicroGamepad.ButtonMenu?.IsPressed == true)
+                        buttons |= Buttons.Start;
+
+                    // Map the touchpad directional input to DPad
+                    if (controller.MicroGamepad.Dpad.Up.IsPressed)
+                    {
+                        Up = ButtonState.Pressed;
+                        buttons |= Buttons.DPadUp;
+                    }
+                    if (controller.MicroGamepad.Dpad.Down.IsPressed)
+                    {
+                        Down = ButtonState.Pressed;
+                        buttons |= Buttons.DPadDown;
+                    }
+                    if (controller.MicroGamepad.Dpad.Left.IsPressed)
+                    {
+                        Left = ButtonState.Pressed;
+                        buttons |= Buttons.DPadLeft;
+                    }
+                    if (controller.MicroGamepad.Dpad.Right.IsPressed)
+                    {
+                        Right = ButtonState.Pressed;
+                        buttons |= Buttons.DPadRight;
+                    }
+
+                    // Map touchpad position to left thumbstick
+                    leftThumbStickPosition = new Vector2(
+                        controller.MicroGamepad.Dpad.XAxis.Value,
+                        controller.MicroGamepad.Dpad.YAxis.Value);
+
+                    if (MenuPressed)
+                    {
+                        buttons |= Buttons.Back;
+                        MenuPressed = false;
+                    }
+                }
+                else
+#endif
                 if (controller.ExtendedGamepad != null)
                 {
                     if (controller.ExtendedGamepad.ButtonA.IsPressed)
@@ -203,14 +310,13 @@ namespace Microsoft.Xna.Framework.Input
                         buttons |= Buttons.RightStick;
                     }
 
-                    leftThumbStickPosition.X = controller.ExtendedGamepad.LeftThumbstick.XAxis.Value;
-                    leftThumbStickPosition.Y = controller.ExtendedGamepad.LeftThumbstick.YAxis.Value;
-                    rightThumbStickPosition.X = controller.ExtendedGamepad.RightThumbstick.XAxis.Value;
-                    rightThumbStickPosition.Y = controller.ExtendedGamepad.RightThumbstick.YAxis.Value;
-                    leftTriggerValue = controller.ExtendedGamepad.LeftTrigger.Value;
-                    rightTriggerValue = controller.ExtendedGamepad.RightTrigger.Value;
+                    // Read thumbstick/trigger values via raw ObjC runtime
+                    // .NET tvOS bindings throw InvalidCastException on some properties
+                    ReadThumbsticks(controller.ExtendedGamepad,
+                        out _lastLX, out _lastLY, out _lastRX, out _lastRY,
+                        out _lastLT, out _lastRT);
                 }
-                else if (controller.Gamepad != null)
+                else if (SafeHasGamepad(controller))
                 {
                     if (controller.Gamepad.ButtonA.IsPressed)
                         buttons |= Buttons.A;
@@ -248,8 +354,8 @@ namespace Microsoft.Xna.Framework.Input
                 }
             }
             var state = new GamePadState(
-                new GamePadThumbSticks(leftThumbStickPosition, rightThumbStickPosition, leftDeadZoneMode, rightDeadZoneMode),
-                new GamePadTriggers(leftTriggerValue, rightTriggerValue),
+                new GamePadThumbSticks(new Vector2(_lastLX, _lastLY), new Vector2(_lastRX, _lastRY), leftDeadZoneMode, rightDeadZoneMode),
+                new GamePadTriggers(_lastLT, _lastRT),
                 new GamePadButtons(buttons),
                 new GamePadDPad(Up, Down, Left, Right));
             state.IsConnected = connected;
