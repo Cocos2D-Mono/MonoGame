@@ -48,11 +48,11 @@ namespace Microsoft.Xna.Framework {
                 var scale = _viewController.View.ContentScaleFactor;
 
 #if MACCATALYST
-                // On Catalyst, use view bounds directly — no orientation swap needed,
-                // and don't multiply by ContentScaleFactor (the window manager handles scaling)
+                // On Catalyst, use view bounds scaled by ContentScaleFactor
+                // to match the physical pixel dimensions of the framebuffer
                 return new Rectangle(
-                    (int)bounds.X, (int)bounds.Y,
-                    (int)bounds.Width, (int)bounds.Height);
+                    (int)(bounds.X * scale), (int)(bounds.Y * scale),
+                    (int)(bounds.Width * scale), (int)(bounds.Height * scale));
 #else
                 // TODO: Calculate this only when dirty.
                 if (_viewController is iOSGameViewController)
