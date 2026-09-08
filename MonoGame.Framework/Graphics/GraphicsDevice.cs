@@ -382,8 +382,10 @@ namespace Microsoft.Xna.Framework.Graphics
             Dispose(false);
         }
 
-        internal int GetClampedMultisampleCount(int multiSampleCount)
+        internal int GetClampedMultisampleCount(SurfaceFormat format, int multiSampleCount)
         {
+            var maxMultiSampleCount = PlatformGetMaxMultiSampleCount(format);
+
             if (multiSampleCount > 1)
             {
                 // Round down MultiSampleCount to the nearest power of two
@@ -396,9 +398,10 @@ namespace Microsoft.Xna.Framework.Graphics
                 msc = msc | (msc >> 2);
                 msc = msc | (msc >> 4);
                 msc -= (msc >> 1);
+
                 // and clamp it to what the device can handle
-                if (msc > GraphicsCapabilities.MaxMultiSampleCount)
-                    msc = GraphicsCapabilities.MaxMultiSampleCount;
+                if (msc > maxMultiSampleCount)
+                    msc = maxMultiSampleCount;
 
                 return msc;
             }
@@ -923,7 +926,16 @@ namespace Microsoft.Xna.Framework.Graphics
 			else
 			{
 				_tempRenderTargetBinding[0] = new RenderTargetBinding(renderTarget);
-				SetRenderTargets(_tempRenderTargetBinding);
+				
+                try
+                {
+				    SetRenderTargets(_tempRenderTargetBinding);
+                }
+                finally
+                {
+                    // Clear temporary strong reference.
+                    _tempRenderTargetBinding[0] = default;
+                }
 			}
 		}
 
@@ -944,7 +956,16 @@ namespace Microsoft.Xna.Framework.Graphics
             else
             {
                 _tempRenderTargetBinding[0] = new RenderTargetBinding(renderTarget, cubeMapFace);
-                SetRenderTargets(_tempRenderTargetBinding);
+                
+                try
+                {
+				    SetRenderTargets(_tempRenderTargetBinding);
+                }
+                finally
+                {
+                    // Clear temporary strong reference.
+                    _tempRenderTargetBinding[0] = default;
+                }
             }
         }
 

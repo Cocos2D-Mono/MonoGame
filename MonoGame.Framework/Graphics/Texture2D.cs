@@ -270,7 +270,7 @@ namespace Microsoft.Xna.Framework.Graphics
         /// </summary>
         /// <typeparam name="T">The type of the elements in the array.</typeparam>
         /// <param name="level">The mipmap level where the data will be placed.</param>
-        /// <param name="arraySlice">Index inside the texture array</param>
+        /// <param name="arraySlice">Index of the texture we want to copy to inside the texture array</param>
         /// <param name="rect">
         /// The section of the texture where the data will be placed.  null indicates the data will be copied over the
         /// entire texture.
@@ -464,7 +464,7 @@ namespace Microsoft.Xna.Framework.Graphics
         /// </summary>
         /// <typeparam name="T">The type of the elements in the array.</typeparam>
         /// <param name="level">The mipmap level to copy from.</param>
-        /// <param name="arraySlice">Index inside the texture array</param>
+        /// <param name="arraySlice">Index of the texture we want to copy from inside the texture array</param>
         /// <param name="rect">
         /// The section of the texture where the data will be copied from.  null indicates the data will be copied over
         /// the entire texture.
@@ -776,6 +776,18 @@ namespace Microsoft.Xna.Framework.Graphics
         private void ValidateParams<T>(int level, int arraySlice, Rectangle? rect, T[] data,
             int startIndex, int elementCount, out Rectangle checkedRect) where T : struct
         {
+            if (data == null)
+                throw new ArgumentNullException("data");
+            if (startIndex < 0 || startIndex >= data.Length)
+                throw new ArgumentException("startIndex must be at least zero and smaller than data.Length.", "startIndex");
+            if (data.Length < startIndex + elementCount)
+                throw new ArgumentException("The data array is too small.");
+            CommonValidations<T>(level, arraySlice, rect, elementCount, out checkedRect);
+        }
+
+        private void CommonValidations<T>(int level, int arraySlice, Rectangle? rect,
+             int elementCount, out Rectangle checkedRect) where T : struct
+        {
             var textureBounds = new Rectangle(0, 0, Math.Max(width >> level, 1), Math.Max(height >> level, 1));
             checkedRect = rect ?? textureBounds;
             if (level < 0 || level >= LevelCount)
@@ -786,28 +798,21 @@ namespace Microsoft.Xna.Framework.Graphics
                 throw new ArgumentException("arraySlice must be smaller than the ArraySize of this texture and larger than 0.", "arraySlice");
             if (!textureBounds.Contains(checkedRect) || checkedRect.Width <= 0 || checkedRect.Height <= 0)
                 throw new ArgumentException("Rectangle must be inside the texture bounds", "rect");
-            if (data == null)
-                throw new ArgumentNullException("data");
             var tSize = ReflectionHelpers.FastSizeOf<T>();
             var fSize = Format.GetSize();
             if (tSize > fSize || fSize % tSize != 0)
-                throw new ArgumentException("Type T is of an invalid size for the format of this texture.", "T");
-            if (startIndex < 0 || startIndex >= data.Length)
-                throw new ArgumentException("startIndex must be at least zero and smaller than data.Length.", "startIndex");
-            if (data.Length < startIndex + elementCount)
-                throw new ArgumentException("The data array is too small.");
+                throw new ArgumentException("Type T is of an invalid size for the format of this texture.", "T");;
 
             int dataByteSize;
             if (Format.IsCompressedFormat())
             {
                 int blockWidth, blockHeight;
                 Format.GetBlockSize(out blockWidth, out blockHeight);
-                int blockWidthMinusOne = blockWidth - 1;
-                int blockHeightMinusOne = blockHeight - 1;
                 // round x and y down to next multiple of block size; width and height up to next multiple of block size
-                var roundedWidth = (checkedRect.Width + blockWidthMinusOne) & ~blockWidthMinusOne;
-                var roundedHeight = (checkedRect.Height + blockHeightMinusOne) & ~blockHeightMinusOne;
-                checkedRect = new Rectangle(checkedRect.X & ~blockWidthMinusOne, checkedRect.Y & ~blockHeightMinusOne,
+                // we need to use this rather than the old code where because ASTC Compressed Textures are NOT Powers of 2.
+                var roundedWidth = (checkedRect.Width + blockWidth - 1) / blockWidth * blockWidth;
+                var roundedHeight = (checkedRect.Height + blockHeight - 1) / blockHeight * blockHeight;
+                checkedRect = new Rectangle(checkedRect.X / blockWidth * blockWidth, checkedRect.Y / blockHeight * blockHeight,
 #if OPENGL
                     // OpenGL only: The last two mip levels require the width and height to be
                     // passed as 2x2 and 1x1, but there needs to be enough data passed to occupy
