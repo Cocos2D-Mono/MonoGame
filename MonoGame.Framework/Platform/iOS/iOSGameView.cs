@@ -332,6 +332,17 @@ namespace Microsoft.Xna.Framework {
                 pp.BackBufferHeight = height;
                 pp.BackBufferWidth = width;
 
+#if MACCATALYST
+                // TouchPanel scales touch positions by DisplayWidth/Height over the window's
+                // ClientBounds. GraphicsDeviceManager seeds the display size from
+                // UIScreen.MainScreen.Bounds, which on iOS is the view but on Catalyst is the
+                // whole display, so a windowed game scaled every touch by display/window and
+                // clicks landed outside the game's viewport. Keep the touch panel in step
+                // with the framebuffer; LayoutSubviews re-enters here on window resizes.
+                TouchPanel.DisplayWidth = width;
+                TouchPanel.DisplayHeight = height;
+#endif
+
 				gds.GraphicsDevice.Viewport = new Viewport(
 					0, 0,
 					pp.BackBufferWidth,
