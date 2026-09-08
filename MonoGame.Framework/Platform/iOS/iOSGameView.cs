@@ -341,6 +341,17 @@ namespace Microsoft.Xna.Framework {
                 // with the framebuffer; LayoutSubviews re-enters here on window resizes.
                 TouchPanel.DisplayWidth = width;
                 TouchPanel.DisplayHeight = height;
+
+                // The preferred back buffer size was captured at construction, while the view
+                // was still framed to the whole screen. Every later ApplyChanges (window
+                // resizes and orientation events route through it) rewrites the presentation
+                // parameters from that preferred size, undoing this framebuffer size and
+                // magnifying the scene. Let the framebuffer own the size on Catalyst.
+                if (gdm != null)
+                {
+                    gdm.PreferredBackBufferWidth = width;
+                    gdm.PreferredBackBufferHeight = height;
+                }
 #endif
 
 				gds.GraphicsDevice.Viewport = new Viewport(

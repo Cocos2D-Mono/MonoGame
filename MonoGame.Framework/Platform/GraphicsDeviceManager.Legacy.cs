@@ -233,13 +233,22 @@ namespace Microsoft.Xna.Framework
             // Ensure the presentation parameter orientation and buffer size matches the window
             _graphicsDevice.PresentationParameters.DisplayOrientation = _game.Window.CurrentOrientation;
 
-            // Set the presentation parameters' actual buffer size to match the orientation
-            bool isLandscape = (0 != (_game.Window.CurrentOrientation & (DisplayOrientation.LandscapeLeft | DisplayOrientation.LandscapeRight)));
             int w = PreferredBackBufferWidth;
             int h = PreferredBackBufferHeight;
 
+#if MACCATALYST
+            // A Catalyst window can be any shape, and the preferred size tracks the view's
+            // framebuffer (iOSGameView.CreateFramebuffer), so it is already oriented.
+            // Swapping it by orientation would turn a tall window's buffer sideways.
+            _graphicsDevice.PresentationParameters.BackBufferWidth = w;
+            _graphicsDevice.PresentationParameters.BackBufferHeight = h;
+#else
+            // Set the presentation parameters' actual buffer size to match the orientation
+            bool isLandscape = (0 != (_game.Window.CurrentOrientation & (DisplayOrientation.LandscapeLeft | DisplayOrientation.LandscapeRight)));
+
             _graphicsDevice.PresentationParameters.BackBufferWidth = isLandscape ? Math.Max(w, h) : Math.Min(w, h);
             _graphicsDevice.PresentationParameters.BackBufferHeight = isLandscape ? Math.Min(w, h) : Math.Max(w, h);
+#endif
 
             ResetClientBounds();
 #endif
