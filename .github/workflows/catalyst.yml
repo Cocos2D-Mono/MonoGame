@@ -1,0 +1,92 @@
+name: Catalyst platform
+
+# Cocos2D-Mono's own check for this fork's Mac Catalyst and tvOS platform work
+# (Linear C2D-254). The inherited upstream workflow (main.yml) assumes upstream's
+# runners: its Windows visual tests cannot create an OpenGL device on GitHub-hosted
+# runners, and it builds the whole matrix twice per pull request. It is disabled on
+# this fork. This workflow builds only what the org ships from the fork, and
+# compile-checks the iOS project because Catalyst and tvOS share its source files.
+#
+# Kept as a separate file so upstream syncs never conflict with it.
+
+on:
+  push:
+    branches: [feature/mac-catalyst-support]
+  pull_request:
+    branches: [feature/mac-catalyst-support]
+  workflow_dispatch:
+
+concurrency:
+  group: catalyst-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The Catalyst and tvOS projects target net10.0-*, so the .NET 10 band is required
+  # (upstream's main.yml builds its net8.0-* projects with the .NET 9 SDK).
+  DOTNET_VERSION: '10.0.x'
+  # Apple platform version carried by the .NET 10 Apple workloads. The iOS compile
+  # check needs it because MonoGame.Framework.iOS.csproj hardcodes the net8.0 value.
+  APPLE_PLATFORM_VERSION: '26.0'
+
+jobs:
+  apple:
+    name: Catalyst + tvOS (${{ matrix.configuration }})
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      # The Apple projects compile two source submodules. Everything else under
+      # .gitmodules is native or desktop-only and would just slow the checkout down.
+      - name: Fetch the StbImage submodules
+        run: git submodule update --init --depth 1 ThirdParty/StbImageSharp ThirdParty/StbImageWriteSharp
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Apple workloads
+        run: dotnet workload install maccatalyst tvos ios --skip-manifest-update
+
+      - name: Build Mac Catalyst
+        run: dotnet build MonoGame.Framework/MonoGame.Framework.MacCatalyst.csproj -c ${{ matrix.configuration }}
+
+      - name: Build tvOS
+        run: dotnet build MonoGame.Framework/MonoGame.Framework.tvOS.csproj -c ${{ matrix.configuration }}
+
+      # MonoGame.Framework.iOS.csproj targets net8.0-ios like upstream, which the .NET 10
+      # band cannot build. Override the target for a compile-only check of the shared
+      # iOS platform code (Platform/iOS/*, GraphicsDeviceManager.Legacy.cs). This is
+      # not the shipping iOS target; games consume the stock MonoGame iOS package.
+      # The restore must be explicit: the implicit restore inside `dotnet build` does
+      # not apply the TargetFramework override and leaves the assets file without it.
+      - name: Compile-check iOS (shared platform code)
+        if: matrix.configuration == 'Debug'
+        run: |
+          rm -rf MonoGame.Framework/obj/iOS
+          dotnet restore MonoGame.Framework/MonoGame.Framework.iOS.csproj \
+            -p:TargetFramework=net10.0-ios -p:TargetPlatformVersion=${{ env.APPLE_PLATFORM_VERSION }}
+          dotnet build MonoGame.Framework/MonoGame.Framework.iOS.csproj -c Debug --no-restore \
+            -p:TargetFramework=net10.0-ios -p:TargetPlatformVersion=${{ env.APPLE_PLATFORM_VERSION }}
+
+      # The assemblies consumers reference by HintPath (Frutz, Abuga) and that the
+      # engine's Catalyst TFM builds against; handy for inspecting a PR's output.
+      - name: Upload Catalyst and tvOS assemblies
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: MonoGame.Framework-Apple-${{ matrix.configuration }}
+          path: |
+            Artifacts/MonoGame.Framework/MacCatalyst/${{ matrix.configuration }}/MonoGame.Framework.dll
+            Artifacts/MonoGame.Framework/tvOS/${{ matrix.configuration }}/MonoGame.Framework.dll
+          if-no-files-found: error
