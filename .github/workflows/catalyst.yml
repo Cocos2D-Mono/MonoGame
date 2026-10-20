@@ -11,9 +11,9 @@ name: Catalyst platform
 
 on:
   push:
-    branches: [feature/mac-catalyst-support]
+    branches: [cocos2d-mono]
   pull_request:
-    branches: [feature/mac-catalyst-support]
+    branches: [cocos2d-mono]
   workflow_dispatch:
 
 concurrency:
