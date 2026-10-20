@@ -1,3 +1,9 @@
+> [!NOTE]
+> **This is [Cocos2D-Mono](https://github.com/Cocos2D-Mono/cocos2d-mono)'s fork of MonoGame.** Its `cocos2d-mono` branch adds Mac Catalyst and tvOS platform projects (`MonoGame.Framework/MonoGame.Framework.MacCatalyst.csproj` and `MonoGame.Framework/MonoGame.Framework.tvOS.csproj`), which Cocos2D-Mono builds those platforms against, and a "Catalyst platform" workflow that builds them.
+>
+> - The branch follows MonoGame's releases. Each time Cocos2D-Mono moves to a new MonoGame release, this branch is rebased onto that release's tag.
+> - This work isn't contributed upstream, because MonoGame's policy on AI-assisted contributions rules it out. Please don't open pull requests from this branch to [MonoGame/MonoGame](https://github.com/MonoGame/MonoGame).
+
 <div align="center">
  <a href="https://monogame.net/">
    <img height="128" alt="MonoGame" src="https://raw.githubusercontent.com/MonoGame/MonoGame.Logo/refs/heads/master/FullColorOnLight/LogoOnly_128px.png">
